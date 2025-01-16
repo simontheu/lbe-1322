@@ -1,5 +1,5 @@
-# lbe-1420
-LBE-1420 GPS locked clock source config
+# lbe-1322
+LBE-1322 GPS locked clock source config
 
 ## Prerequisites ##
 
@@ -10,7 +10,7 @@ gcc
 
 For the frequency setting and status utility:
 ```
-    gcc -o lbe-142x lbe-142x.c
+    gcc -o lbe-1322 lbe-1322.c
 ```
 
 ## Finding Your Device ##
@@ -29,12 +29,12 @@ For the frequency setting and status utility:
 
     DRIVER=hid-generic
     HID_ID=0003:00001DD2:00002443
-    HID_NAME=Leo Bodnar Electronics LBE-1420 GPS Locked Clock Source
+    HID_NAME=Leo Bodnar Electronics LBE-1322 Fast Pulse Generator
     HID_PHYS=usb-0000:02:00.0-2.1/input2
     HID_UNIQ=0673ED0E4101
     MODALIAS=hid:b0003g0001v00001DD2p00002443
 ```
 3. Plug the hidraw device back into utility, eg
 ```
-    ./lbe-142x /dev/hidraw1 --f1 10000000 --blink1
+    ./lbe-1322 /dev/hidraw1 --f1 10000000 --blink1
 ```
