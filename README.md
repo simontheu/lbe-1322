@@ -36,5 +36,5 @@ For the frequency setting and status utility:
 ```
 3. Plug the hidraw device back into utility, eg
 ```
-    ./lbe-1322 /dev/hidraw1 --f1 10000000 --blink1
+    ./lbe-1322 /dev/hidraw1 --f 10000000
 ```
