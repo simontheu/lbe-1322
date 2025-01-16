@@ -248,9 +248,9 @@ int main(int argc, char **argv)
 	    
 	    char polarity_string[16];
 	    if (polarity == 1) {
-	    	sprintf(polarity_string, "Normal");
-	    } else if (polarity == 0) {
 	    	sprintf(polarity_string, "Inverted");
+	    } else if (polarity == 0) {
+	    	sprintf(polarity_string, "Normal");
 	    } else {
 	    	printf("Invalid option: %i", polarity);
 	    }
