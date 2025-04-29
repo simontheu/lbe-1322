@@ -78,7 +78,7 @@ int main(int argc, char **argv)
             printf("        --t:  [0 or 1] 0 = trigger output, 1=sync input\n");
             printf("        --p:  [0 or 1] 0 = normal, 1= inverted\n");
             printf("        --s: integer withing ther range 100000000 to 300000000 \n               sync input frequency in Hz\n");
-            printf("     --sync:  sync to incoming signal\n\n\n");
+            //printf("     --sync:  sync to incoming signal\n\n\n"); //Not necessary
             
             return -1;
       }
