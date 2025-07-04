@@ -40,6 +40,7 @@
 #define LBE_1420_SET_F1_NO_SAVE	0x03
 #define LBE_1420_SET_F1		0x04
 
+#define BYTE_COUNT 40  //For 40 bytes storage
 /*
  * Ugly hack to work around failing compilation on systems that don't
  * yet populate new version of hidraw.h to userspace.
@@ -53,8 +54,11 @@
 #define HIDIOCGRAWNAME(len)     _IOC(_IOC_READ, 'H', 0x04, len)
 
 
-int processCommandLineArguments(int argc, char **argv, int *freq, int *amplitude, int *trigger_mode,int *sync_freq, int *polarity);
-	
+int processCommandLineArguments(int argc, char **argv, int *freq, int *amplitude, int *trigger_mode,int *sync_freq, int *polarity, int *store_bytes, int *read_bytes);
+int parse_byte_list(const char *input, uint8_t *out_bytes);
+
+uint8_t bytes[BYTE_COUNT];//storage array to send/receive
+
 int main(int argc, char **argv)
 {
       printf("Leo Bodnar LBE-1322 Fast Pulse Generator Config\n");
@@ -78,7 +82,10 @@ int main(int argc, char **argv)
             printf("        --t:  [0 or 1] 0 = trigger output, 1=sync input\n");
             printf("        --p:  [0 or 1] 0 = normal, 1= inverted\n");
             printf("        --s: integer withing ther range 100000000 to 300000000 \n               sync input frequency in Hz\n");
-            printf("     --sync:  sync to incoming signal\n\n\n");
+            printf("        --r:  read 40 bytes from internal storage \n");
+            printf("        --w:  write 40 bytes (hex) of data to internal storage \n");
+            printf("        e.g.   --w 0,08,ef,3,4,5,....39 \n");
+            //printf("     --sync:  sync to incoming signal\n\n\n");
             
             return -1;
       }
@@ -125,7 +132,6 @@ int main(int argc, char **argv)
       }
 
       /* Get Feature */
-      buf[0] = 0x9; /* Report Number */
       res = ioctl(fd, HIDIOCGFEATURE(256), buf);
       
       if (res < 0) {
@@ -160,10 +166,6 @@ int main(int argc, char **argv)
             printf("\n");
       }
       
-      
-      
-      
-      
       /* Get Raw Name */
       res = ioctl(fd, HIDIOCGRAWNAME(256), buf);
 
@@ -178,10 +180,12 @@ int main(int argc, char **argv)
 	int trigger_mode = -1;
 	int sync_freq = -1;
 	int polarity = -1;
-	int sync_now = -1;
+        int sync_now = -1;
+        int store_bytes = -1;
+        int read_bytes = -1;
+        
 	
-	
-	processCommandLineArguments(argc, argv, &freq, &amplitude, &trigger_mode, &sync_freq, &polarity);
+	processCommandLineArguments(argc, argv, &freq, &amplitude, &trigger_mode, &sync_freq, &polarity, &store_bytes, &read_bytes);
       	printf("  Changes:\n");
       	int changed = 0;
 	if (freq != -1) {
@@ -279,7 +283,58 @@ int main(int argc, char **argv)
             changed = 1;
 	}
 	
-
+	if (read_bytes != -1) {
+	
+            buf[0] = 0;
+            buf[1] = 0xff; //Set next get feature
+            buf[2] = 0x07;//Set next get feature to be bytes
+            
+            /* Set Feature */
+            res = ioctl(fd, HIDIOCSFEATURE(60), buf);
+            if (res < 0) perror("HIDIOCSFEATURE");
+            
+            /* Get Feature */
+            buf[0] = 0x0; /* Report Number */
+            res = ioctl(fd, HIDIOCGFEATURE(256), buf);
+            printf ("Read bytes:\n"); 
+            for(i=0;i<60;i++) {
+              printf("\t[%i] = 0x%02x\n", i, buf[i]);
+            }
+            printf("\n\n");
+	
+	} else	if (store_bytes != -1) {
+            buf[0] = 0;
+            buf[1] = 0x07; //Feature 7
+          
+            buf[2] = 0;
+            
+            for (int i =0; i<40;i++) {
+                buf[i+3] = bytes[i];
+            }
+            /* Set Feature */
+            res = ioctl(fd, HIDIOCSFEATURE(60), buf);
+            if (res < 0) perror("HIDIOCSFEATURE");
+            printf ("\tSuccessfully stored bytes\n");
+            
+            buf[0] = 0;
+            buf[1] = 0xff; //Set next get feature
+            buf[2] = 0x07;//Set next get feature to be bytes
+            
+            /* Set Feature */
+            res = ioctl(fd, HIDIOCSFEATURE(60), buf);
+            if (res < 0) perror("HIDIOCSFEATURE");
+            
+            /* Get Feature */
+            buf[0] = 0x0; /* Report Number */
+            res = ioctl(fd, HIDIOCGFEATURE(256), buf);
+            printf ("Read bytes:\n"); 
+            for(i=0;i<60;i++) {
+              printf("\t[%i] = 0x%02x\n", i, buf[i]);
+            }
+            printf("\n\n");
+            changed = 1;
+        }
+	
 	if (!changed) {
 	    printf("    No changes made\n");
 	}
@@ -290,9 +345,11 @@ int main(int argc, char **argv)
 }
 
 
-int processCommandLineArguments(int argc, char **argv, int *freq, int *amplitude, int *trigger_mode,int *sync_freq, int *polarity)
+int processCommandLineArguments(int argc, char **argv, int *freq, int *amplitude, int *trigger_mode,int *sync_freq, int *polarity, int *store_bytes, int *read_bytes)
 {
     int c;
+    
+    int option_index = 0;
     
     while (1)
     {
@@ -307,11 +364,12 @@ int processCommandLineArguments(int argc, char **argv, int *freq, int *amplitude
                 {"t",   required_argument, 0, 'c'},
                 {"p",   required_argument, 0, 'd'},
                 {"s",   required_argument, 0, 'e'},
+                {"w",   required_argument, 0, 'f'},
+                {"r",   no_argument, 0, 'g'},
                 
                 {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
-        int option_index = 0;
 
         c = getopt_long (argc, argv, "abc:d:f:",
                     long_options, &option_index);
@@ -344,6 +402,20 @@ int processCommandLineArguments(int argc, char **argv, int *freq, int *amplitude
                 *sync_freq = atoi(optarg);
                 break;
                 
+            case 'f'://sync freq
+                if (parse_byte_list(optarg, bytes) != 0) {
+                    printf("Invalid bytes for storage");
+                } else {
+                    *store_bytes = 1;
+                    printf("Valid bytes: ");
+                    for (int i=0; i<40; i++) { printf ("0x%02x, ", bytes[i]); }
+                }
+                printf("\n");
+                break;
+           case 'g'://sync freq
+                *read_bytes = 1;
+                break;
+                
             case '?':
                 /* getopt_long already printed an error message. */
                 break;
@@ -351,7 +423,22 @@ int processCommandLineArguments(int argc, char **argv, int *freq, int *amplitude
             default:
                 abort ();
         }
+        option_index++;
     }
     return 0;
 }
 
+int parse_byte_list(const char *input, uint8_t *out_bytes) {
+
+    char *copy = strdup(input);
+    char *token = strtok(copy, ",");
+    int count = 0;
+    
+    while (token != NULL && count < BYTE_COUNT) {
+        out_bytes[count++] = (uint8_t)strtol(token, NULL, 16);
+        token = strtok(NULL, ",");
+    }
+
+    return (count == BYTE_COUNT) ? 0: -1;
+    
+}
