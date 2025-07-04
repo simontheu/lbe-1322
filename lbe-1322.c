@@ -86,6 +86,7 @@ int main(int argc, char **argv)
             printf("        --w:  write 40 bytes (hex) of data to internal storage \n");
             printf("        e.g.   --w 0,08,ef,3,4,5,....39 \n");
             //printf("     --sync:  sync to incoming signal\n\n\n");
+
             
             return -1;
       }
